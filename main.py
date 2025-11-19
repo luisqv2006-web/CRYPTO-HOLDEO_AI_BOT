@@ -1,10 +1,9 @@
-# ======================================================================
-# 🤖 CRYPTO ORÁCULO — GOD MODE ULTRA (Render Free + UptimeRobot)
-# ======================================================================
-
 import requests
 import time
 import numpy as np
+import os
+from flask import Flask
+import threading
 
 # ===========================
 # CONFIGURACIÓN TELEGRAM
@@ -14,7 +13,20 @@ CHAT_ID = "-1009876543210"
 API_URL = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
 
 # ===========================
-# FUNCIÓN PARA ENVIAR A TELEGRAM
+# SERVIDOR FLASK PARA RENDER
+# ===========================
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "CRYPTO ORÁCULO GOD MODE ULTRA — ACTIVO"
+
+def iniciar_servidor():
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port, threaded=True)
+
+# ===========================
+# ENVIAR A TELEGRAM
 # ===========================
 def send(text):
     try:
@@ -39,7 +51,7 @@ TOP = {
 }
 
 # ===========================
-# OBTENER PRECIO DESDE BINANCE
+# PRECIO BINANCE
 # ===========================
 def precio_binance(symbol):
     try:
@@ -49,7 +61,7 @@ def precio_binance(symbol):
         return None
 
 # ===========================
-# OBTENER PRECIO DESDE COINGECKO
+# PRECIO COINGECKO
 # ===========================
 def precio_cg(coin_id):
     try:
@@ -59,7 +71,7 @@ def precio_cg(coin_id):
         return None
 
 # ===========================
-# ANALISIS RSI
+# RSI
 # ===========================
 def rsi(hist, period=14):
     delta = np.diff(hist)
@@ -81,8 +93,6 @@ def señal_rsi(valor):
         return "⚠️ Sobrecompra fuerte"
     return "📈 Normal"
 
-precios_previos = {}
-
 def movimiento_rapido(p_actual, p_anterior):
     if p_anterior is None:
         return None
@@ -93,11 +103,10 @@ def movimiento_rapido(p_actual, p_anterior):
         return f"🔴 CAÍDA RÁPIDA {cambio:.2f}%"
     return None
 
-# ===========================
-# LOOP DEL BOT (FUNCIONA SOLO)
-# ===========================
+precios_previos = {}
+
 def loop_bot():
-    send("🚀 *CRYPTO ORÁCULO GOD MODE — ACTIVADO*")
+    send("🚀 *CRYPTO ORÁCULO GOD MODE ULTRA ACTIVADO*")
 
     while True:
         for coin_id, simbolo in TOP.items():
@@ -105,7 +114,6 @@ def loop_bot():
                 p1 = precio_binance(simbolo)
                 p2 = precio_cg(coin_id)
                 precios = [x for x in [p1, p2] if x is not None]
-
                 if not precios:
                     continue
 
@@ -135,8 +143,6 @@ def loop_bot():
 
         time.sleep(60)
 
-# ===========================
-# EJECUTAR BOT DIRECTO
-# ===========================
 if __name__ == "__main__":
+    threading.Thread(target=iniciar_servidor).start()
     loop_bot()
