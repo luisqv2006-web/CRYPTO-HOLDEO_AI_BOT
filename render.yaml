@@ -1,7 +1,7 @@
 services:
   - type: web
     name: crypto-holde-ai-bot
-    runtime: python
+    env: python
     plan: free
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python3 main.py"
