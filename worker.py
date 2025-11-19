@@ -1,6 +1,9 @@
 import time
 import requests
 import numpy as np
+import hashlib
+import hmac
+import urllib.parse
 
 from utils import get_klines
 from indicators import (
@@ -15,11 +18,33 @@ from whales import whale_monitor
 
 
 # ======================================================
-# 🔥 TELEGRAM CONFIG (YA INTEGRADO)
+# 🔥 TELEGRAM CONFIG — DATOS REALES
 # ======================================================
 TOKEN = "8466103477:AAHdB0YVMfxlj3fO8VQfZapAFi362-Vs4S0"
-CHAT_ID = "-1009876543210"
+CHAT_ID = "-1003348348510"
 API_URL = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+
+
+# ======================================================
+# 🔥 BINANCE CONFIG (LECTURA DE MERCADO)
+# ======================================================
+API_KEY = ""       # No obligatorio para datos públicos
+API_SECRET = ""    # No obligatorio para datos públicos
+BASE_URL = "https://api.binance.com"
+
+
+def binance_request(endpoint, params=None):
+    url = BASE_URL + endpoint
+    if params:
+        url += "?" + urllib.parse.urlencode(params)
+
+    headers = {"X-MBX-APIKEY": API_KEY}
+
+    try:
+        r = requests.get(url, headers=headers, timeout=5)
+        return r.json()
+    except:
+        return None
 
 
 # ======================================================
@@ -83,7 +108,7 @@ def analyze(symbol):
         # BALLENAS
         whales = whale_monitor()
 
-        # MENSAJE VIP
+        # MENSAJE VIP FINAL
         msg = f"""
 💎 *CRYPTOHOLDEO_AI_VIP — {symbol}*
 ━━━━━━━━━━━━━━━━━━━━
@@ -138,6 +163,7 @@ def loop():
     while True:
         for c in CRYPTOS:
             analyze(c)
+
         time.sleep(60)
 
 
