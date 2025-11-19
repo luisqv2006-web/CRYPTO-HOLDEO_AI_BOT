@@ -1,9 +1,6 @@
 import time
 import requests
 import numpy as np
-import hashlib
-import hmac
-import urllib.parse
 
 from utils import get_klines
 from indicators import (
@@ -18,33 +15,11 @@ from whales import whale_monitor
 
 
 # ======================================================
-# 🔥 TELEGRAM CONFIG — DATOS REALES
+# 🔥 TELEGRAM CONFIG
 # ======================================================
 TOKEN = "8466103477:AAHdB0YVMfxlj3fO8VQfZapAFi362-Vs4S0"
-CHAT_ID = "-1003348348510"
+CHAT_ID = "-1009876543210"
 API_URL = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-
-
-# ======================================================
-# 🔥 BINANCE CONFIG (LECTURA DE MERCADO)
-# ======================================================
-API_KEY = ""       # No obligatorio para datos públicos
-API_SECRET = ""    # No obligatorio para datos públicos
-BASE_URL = "https://api.binance.com"
-
-
-def binance_request(endpoint, params=None):
-    url = BASE_URL + endpoint
-    if params:
-        url += "?" + urllib.parse.urlencode(params)
-
-    headers = {"X-MBX-APIKEY": API_KEY}
-
-    try:
-        r = requests.get(url, headers=headers, timeout=5)
-        return r.json()
-    except:
-        return None
 
 
 # ======================================================
@@ -80,19 +55,19 @@ def analyze(symbol):
         return
 
     try:
-        # INDICADORES TÉCNICOS
+        # Indicadores
         e20 = ema20(df).iloc[-1]
         e50 = ema50(df).iloc[-1]
         e200 = ema200(df).iloc[-1]
         rsi_v = rsi(df).iloc[-1]
         atr_v = atr(df).iloc[-1]
         mom = momentum(df).iloc[-1]
-        macd_line, signal, hist = macd(df)
+        macd_line, signal_line, hist = macd(df)
 
-        # SMART MONEY CONCEPTS
+        # Smart Money
         smc = smc_summary(df)
 
-        # PATRONES / DIVERGENCIAS
+        # Patrones
         div = detect_divergence(df)
         candle = candle_pattern(df)
         vol = volume_change(df)
@@ -102,13 +77,12 @@ def analyze(symbol):
         # IA
         ai = ai_score(df)
 
-        # NOTICIAS
+        # Noticias
         news = get_strong_news()
 
-        # BALLENAS
+        # Ballenas
         whales = whale_monitor()
 
-        # MENSAJE VIP FINAL
         msg = f"""
 💎 *CRYPTOHOLDEO_AI_VIP — {symbol}*
 ━━━━━━━━━━━━━━━━━━━━
@@ -125,8 +99,8 @@ def analyze(symbol):
 {chr(10).join(smc)}
 
 📈 *Liquidez*
-• Zona alta: {max_z:.2f}
-• Zona baja: {min_z:.2f}
+• Alta: {max_z:.2f}
+• Baja: {min_z:.2f}
 
 🔍 *Patrones*
 • Divergencia: {div}
@@ -141,10 +115,10 @@ def analyze(symbol):
 • LSTM: {ai['lstm']}
 
 📰 *Noticias*
-{chr(10).join([f"{n['icon']} {n['title']}" for n in news]) if news else 'Sin noticias importantes.'}
+{chr(10).join([f"{n['icon']} {n['title']}" for n in news]) if news else "Sin noticias"}
 
 🐳 *Ballenas*
-{chr(10).join(whales) if whales else 'Sin movimientos grandes.'}
+{chr(10).join(whales) if whales else "Sin movimientos"}
 ━━━━━━━━━━━━━━━━━━━━
 """
 
