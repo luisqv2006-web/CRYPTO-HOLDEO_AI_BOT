@@ -1,5 +1,6 @@
 import time
 import requests
+import numpy as np
 
 from utils import get_klines
 from indicators import (
@@ -12,33 +13,28 @@ from machine_learning import ai_score
 from sentiment import get_strong_news
 from whales import whale_monitor
 
-# ================================
-# CONFIGURACIÓN TELEGRAM FINAL
-# ================================
+
+# ======================================================
+# 🔥 TELEGRAM CONFIG (YA INTEGRADO)
+# ======================================================
 TOKEN = "8466103477:AAHdB0YVMfxlj3fO8VQfZapAFi362-Vs4S0"
 CHAT_ID = "-1009876543210"
 API_URL = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
 
-# ================================
-# CRYPTOS ACTIVAS
-# ================================
+
+# ======================================================
+# 🔥 LISTA DE CRYPTOS VIP
+# ======================================================
 CRYPTOS = [
-    "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT",
-    "ADAUSDT", "AVAXUSDT", "DOGEUSDT", "DOTUSDT", "LINKUSDT"
+    "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT",
+    "XRPUSDT", "ADAUSDT", "AVAXUSDT", "DOGEUSDT",
+    "DOTUSDT", "LINKUSDT"
 ]
 
-# ================================
-# ANTI-CRASH
-# ================================
-def safe_value(v, decimals=2):
-    try:
-        return round(float(v), decimals)
-    except:
-        return 0
 
-# ================================
-# ENVIAR TELEGRAM
-# ================================
+# ======================================================
+# 📩 ENVIAR A TELEGRAM
+# ======================================================
 def send(msg):
     try:
         requests.post(API_URL, data={
@@ -49,88 +45,104 @@ def send(msg):
     except:
         pass
 
-# ================================
-# ANÁLISIS PRINCIPAL
-# ================================
+
+# ======================================================
+# 🔥 ANÁLISIS PROFESIONAL (VIP)
+# ======================================================
 def analyze(symbol):
     df = get_klines(symbol, "1h", 200)
-    if df is None:
+    if df is None or len(df) < 200:
         return
 
     try:
-        # ===== INDICADORES =====
-        e20 = safe_value(ema20(df).iloc[-1])
-        e50 = safe_value(ema50(df).iloc[-1])
-        e200 = safe_value(ema200(df).iloc[-1])
+        # INDICADORES TÉCNICOS
+        e20 = ema20(df).iloc[-1]
+        e50 = ema50(df).iloc[-1]
+        e200 = ema200(df).iloc[-1]
+        rsi_v = rsi(df).iloc[-1]
+        atr_v = atr(df).iloc[-1]
+        mom = momentum(df).iloc[-1]
+        macd_line, signal, hist = macd(df)
 
-        rsi_val = safe_value(rsi(df).iloc[-1], 1)
-        atr_val = safe_value(atr(df).iloc[-1], 3)
-        mom = safe_value(momentum(df).iloc[-1])
-        macd_line, signal_line, hist = macd(df)
-        macd_hist = safe_value(hist.iloc[-1], 4)
-
-        # ===== ESTRUCTURA DE MERCADO =====
+        # SMART MONEY CONCEPTS
         smc = smc_summary(df)
 
-        # ===== IA =====
+        # PATRONES / DIVERGENCIAS
+        div = detect_divergence(df)
+        candle = candle_pattern(df)
+        vol = volume_change(df)
+        trend = trend_strength(df)
+        max_z, min_z = price_zones(df)
+
+        # IA
         ai = ai_score(df)
 
-        # ===== NOTICIAS =====
+        # NOTICIAS
         news = get_strong_news()
 
-        # ===== BALLENAS =====
+        # BALLENAS
         whales = whale_monitor()
 
-        # ===============================
-        # MENSAJE FINAL PREMIUM (OPCIÓN 1)
-        # ===============================
+        # MENSAJE VIP
         msg = f"""
-💎 *CRYPTO ORÁCULO VIP — {symbol}*
+💎 *CRYPTOHOLDEO_AI_VIP — {symbol}*
 ━━━━━━━━━━━━━━━━━━━━
 📊 *Indicadores*
-• EMA20: {e20}
-• EMA50: {e50}
-• EMA200: {e200}
-• RSI: {rsi_val}
-• ATR: {atr_val}
-• Momentum: {mom}
-• MACD hist: {macd_hist}
+• EMA20: {e20:.2f}
+• EMA50: {e50:.2f}
+• EMA200: {e200:.2f}
+• RSI: {rsi_v:.1f}
+• ATR: {atr_v:.3f}
+• Momentum: {mom:.2f}
+• MACD hist: {hist.iloc[-1]:.4f}
 
 📉 *Smart Money Concepts*
 {chr(10).join(smc)}
 
-🔮 *IA Institucional*
+📈 *Liquidez*
+• Zona alta: {max_z:.2f}
+• Zona baja: {min_z:.2f}
+
+🔍 *Patrones*
+• Divergencia: {div}
+• Velas: {candle}
+• Volumen: {vol}
+• Tendencia: {trend}
+
+🤖 *IA*
 • Confianza: {ai['confidence']}%
 • ARIMA 1h: {ai['arima_1h']}
 • ARIMA 4h: {ai['arima_4h']}
 • LSTM: {ai['lstm']}
 
-📰 *Noticias Importantes*
-{chr(10).join([f"{n['icon']} {n['title']}" for n in news]) if news else 'Sin noticias relevantes.'}
+📰 *Noticias*
+{chr(10).join([f"{n['icon']} {n['title']}" for n in news]) if news else 'Sin noticias importantes.'}
 
 🐳 *Ballenas*
-{chr(10).join(whales) if whales else 'Sin movimientos importantes.'}
+{chr(10).join(whales) if whales else 'Sin movimientos grandes.'}
 ━━━━━━━━━━━━━━━━━━━━
 """
 
         send(msg)
 
     except Exception as e:
-        send(f"⚠ Error analizando {symbol}: {str(e)[:80]}")
+        send(f"⚠️ Error analizando {symbol}: {str(e)[:80]}")
 
 
-# ================================
-# LOOP PRINCIPAL
-# ================================
+# ======================================================
+# 🔁 LOOP PRINCIPAL
+# ======================================================
 def loop():
-    send("🚀 *WORKER INICIADO — Sistema institucional activado*")
+    send("🚀 *WORKER VIP ACTIVADO — Señales institucionales en tiempo real*")
 
     while True:
         for c in CRYPTOS:
             analyze(c)
+        time.sleep(60)
 
-        time.sleep(30)
 
-
+# ======================================================
+# ▶️ EJECUCIÓN
+# ======================================================
 if __name__ == "__main__":
     loop()
