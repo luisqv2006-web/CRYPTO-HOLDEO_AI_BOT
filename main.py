@@ -1,45 +1,103 @@
-from flask import Flask, render_template_string
-import datetime
+# ------------------------------------
+# CRYPTOSNIPER FX — ULTRA PRO BINARIAS v4.0 (STAKE $5)
+# ------------------------------------
+from keep_alive import keep_alive
+keep_alive()
 
-app = Flask(__name__)
+import time
+import requests
+import threading
+import statistics
+import pytz
+from datetime import datetime
 
-TEMPLATE = """
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Crypto Oráculo VIP</title>
-    <style>
-        body { background-color: #0d0d0d; color: #ffffff; font-family: Arial; text-align: center; }
-        h1 { color: #d4af37; margin-top: 40px; }
-        .box {
-            background: #1a1a1a; border: 1px solid #d4af37;
-            padding: 20px; margin: 30px auto;
-            width: 70%; border-radius: 12px;
-        }
-        .footer { margin-top: 50px; color: #777; font-size: 14px; }
-    </style>
-</head>
-<body>
+from auto_copy import AutoCopy
 
-<h1>CRYPTO ORÁCULO — PANEL VIP</h1>
+# ------------------------------------
+# CONFIGURACIÓN
+# ------------------------------------
+TOKEN = "8588736688:AAF_mBkQUJIDXqAKBIzgDvsEGNJuqXJHNxA"
+CHAT_ID = "-1003348348510"
+DERIV_TOKEN = "z30pnK3N1UjKZTA"
 
-<div class="box">
-    <p><strong>Estado del sistema:</strong> ONLINE 🟢</p>
-    <p><strong>Worker:</strong> Ejecutándose en segundo plano ⚙️</p>
-    <p><strong>Última actualización:</strong> {{ time }}</p>
-</div>
+FINNHUB_KEY = "d4d2n71r01qt1lahgi60d4d2n71r01qt1lahgi6g"
+NEWS_API = f"https://finnhub.io/api/v1/calendar/economic?token={FINNHUB_KEY}"
 
-<div class="footer">
-    © Crypto Oráculo VIP — Powered by Day & Érica
-</div>
+API = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
 
-</body>
-</html>
-"""
+mx = pytz.timezone("America/Mexico_City")
 
-@app.route("/")
-def home():
-    return render_template_string(TEMPLATE, time=datetime.datetime.utcnow())
+# ------------------------------------
+# ACTIVOS (Deriv Symbols)
+# ------------------------------------
+SYMBOLS = {
+    "XAU/USD": "frxXAUUSD",
+    "EUR/USD": "frxEURUSD",
+    "GBP/USD": "frxGBPUSD",
+    "USD/JPY": "frxUSDJPY"
+}
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+# Inicializar AutoCopy (sin monto aquí, lo mandamos en cada señal)
+copy_trader = AutoCopy(DERIV_TOKEN)
+
+# ------------------------------------
+# MENSAJERÍA TELEGRAM
+# ------------------------------------
+def send(msg):
+    try:
+        requests.post(API, json={
+            "chat_id": CHAT_ID,
+            "text": msg,
+            "parse_mode": "HTML"
+        })
+    except:
+        pass
+
+
+# ------------------------------------
+# OBTENER VELAS 5M
+# ------------------------------------
+def obtener_velas_5m(symbol_key):
+    symbol = SYMBOLS[symbol_key]
+    now = int(time.time())
+    desde = now - (60 * 60 * 12)
+
+    url = (
+        f"https://finnhub.io/api/v1/forex/candle?"
+        f"symbol={symbol}&resolution=5&from={desde}&to={now}&token={FINNHUB_KEY}"
+    )
+
+    r = requests.get(url).json()
+    if r.get("s") != "ok":
+        return None
+
+    return list(zip(r["t"], r["o"], r["h"], r["l"], r["c"]))
+
+
+# ------------------------------------
+# DETECCIÓN ICT PRO ULTRA
+# ------------------------------------
+def detectar_confluencias(velas):
+    o,h,l,c = zip(*[(x[1], x[2], x[3], x[4]) for x in velas[-12:]])
+
+    cons = {
+        "BOS": False,
+        "CHOCH": False,
+        "OrderBlock": False,
+        "FVG_Internal": False,
+        "FVG_External": False,
+        "EQH": False,
+        "EQL": False,
+        "Liquidity_Internal": False,
+        "Liquidity_External": False,
+        "Volatilidad": False,
+        "Tendencia": False
+    }
+
+    if c[-1] > h[-2]: cons["BOS"] = True
+    if c[-1] < l[-2]: cons["CHOCH"] = True
+
+    if (c[-1] > o[-1] and l[-1] > l[-2]) or (c[-1] < o[-1] and h[-1] < h[-2]):
+        cons["OrderBlock"] = True
+
+    if h[-2
