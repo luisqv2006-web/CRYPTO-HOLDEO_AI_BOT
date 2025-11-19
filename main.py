@@ -1,9 +1,8 @@
-# ============================================
-# 🤖 CRYPTO ORÁCULO — GOD MODE v1.0
-# Análisis Técnico + Fundamental + On-Chain (Free)
-# Señales profesionales enviadas a Telegram
-# Creado para Day por Érica 💎🔥
-# ============================================
+# ======================================================================
+# 🤖 CRYPTO ORÁCULO — GOD MODE FINAL v3.0
+# Hecho por Érica para Day 💎🔥
+# Macro + Gemas + Cartera + Alertas rápidas + Señales PRO en Telegram
+# ======================================================================
 
 import requests
 import time
@@ -15,165 +14,234 @@ from datetime import datetime
 # ===========================
 TOKEN = "8466103477:AAHdB0YVMfxlj3fO8VQfZapAFi362-Vs4S0"
 CHAT_ID = "-1009876543210"
-
 API_URL = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
 
 # ===========================
-# FUNCIONES BÁSICAS TELEGRAM
+# CRYPTOS TOP 10 (MACRO)
 # ===========================
+TOP10 = {
+    "bitcoin": "BTCUSDT",
+    "ethereum": "ETHUSDT",
+    "solana": "SOLUSDT",
+    "binancecoin": "BNBUSDT",
+    "ripple": "XRPUSDT",
+    "cardano": "ADAUSDT",
+    "avalanche-2": "AVAXUSDT",
+    "dogecoin": "DOGEUSDT",
+    "polkadot": "DOTUSDT",
+    "chainlink": "LINKUSDT"
+}
+
+# ======================================================================
+# 📩 ENVÍO A TELEGRAM
+# ======================================================================
 def send(msg):
-    payload = {"chat_id": CHAT_ID, "text": msg, "parse_mode": "Markdown"}
-    requests.post(API_URL, data=payload)
+    requests.post(API_URL, data={"chat_id": CHAT_ID, "text": msg, "parse_mode": "Markdown"})
 
-# ===========================
-# DATOS DE MERCADO (MULTI-FUENTE)
-# ===========================
-
-def precio_binance(simbolo="BTCUSDT"):
-    url = f"https://api.binance.com/api/v3/ticker/price?symbol={simbolo}"
+# ======================================================================
+# 📈 MULTI-FUENTE PRECIOS
+# ======================================================================
+def precio_binance(simbolo):
     try:
-        r = requests.get(url).json()
+        r = requests.get(f"https://api.binance.com/api/v3/ticker/price?symbol={simbolo}").json()
         return float(r["price"])
     except:
         return None
 
-def precio_bybit(simbolo="BTCUSDT"):
-    url = f"https://api.bybit.com/v5/market/tickers?category=spot&symbol={simbolo}"
+def precio_cg(id):
     try:
-        r = requests.get(url).json()
-        return float(r["result"]["list"][0]["lastPrice"])
-    except:
-        return None
-
-def precio_coingecko(id="bitcoin"):
-    url = f"https://api.coingecko.com/api/v3/simple/price?ids={id}&vs_currencies=usd"
-    try:
-        r = requests.get(url).json()
+        r = requests.get(
+            f"https://api.coingecko.com/api/v3/simple/price?ids={id}&vs_currencies=usd"
+        ).json()
         return float(r[id]["usd"])
     except:
         return None
 
-# ===========================
-# ANÁLISIS TÉCNICO
-# ===========================
-
-def rsi(data, period=14):
-    delta = np.diff(data)
-    ganancias = delta.clip(min=0)
-    perdidas = -delta.clip(max=0)
-    avg_gain = np.mean(ganancias[-period:])
-    avg_loss = np.mean(perdidas[-period:])
+# ======================================================================
+# 📊 ANÁLISIS TÉCNICO
+# ======================================================================
+def rsi(hist, period=14):
+    delta = np.diff(hist)
+    gains = delta.clip(min=0)
+    losses = -delta.clip(max=0)
+    avg_gain = np.mean(gains[-period:])
+    avg_loss = np.mean(losses[-period:])
     if avg_loss == 0:
         return 100
     rs = avg_gain / avg_loss
     return 100 - (100 / (1 + rs))
 
-def analizar_tecnico(hist):
-    rsi_value = rsi(hist)
-    tendencia = "ALCISTA" if hist[-1] > np.mean(hist[-20:]) else "BAJISTA"
-    return rsi_value, tendencia
+def detectar_oportunidad(rsi_val):
+    if rsi_val < 25:
+        return "💥 *OPORTUNIDAD ÉPICA*"
+    elif rsi_val < 35:
+        return "🚀 *Rebote probable*"
+    elif rsi_val > 75:
+        return "⚠️ *Sobrecompra*"
+    return "📈 Estable"
 
-# ===========================
-# ANÁLISIS FUNDAMENTAL (LIGERO)
-# ===========================
-
-def fundamental_coingecko(id="bitcoin"):
-    url = f"https://api.coingecko.com/api/v3/coins/{id}"
+# ======================================================================
+# 🧠 FUNDAMENTAL
+# ======================================================================
+def fundamental(id):
     try:
-        r = requests.get(url).json()
+        r = requests.get(f"https://api.coingecko.com/api/v3/coins/{id}").json()
         mc = r["market_data"]["market_cap"]["usd"]
-        holders = r["community_data"]["twitter_followers"]
-        dev_score = r["developer_data"]["commit_count_4_weeks"]
+        dev = r["developer_data"]["commit_count_4_weeks"]
+        comm = r["community_data"]["twitter_followers"]
 
         score = 0
-        if mc > 1_000_000_000: score += 30
-        if holders and holders > 100000: score += 30
-        if dev_score and dev_score > 20: score += 40
-
+        if mc > 1_000_000_000: score += 35
+        if dev and dev > 20: score += 35
+        if comm and comm > 150_000: score += 30
         return score
+
     except:
-        return 50
+        return 60
 
-# ===========================
-# ON-CHAIN GRATIS (SIMPLIFICADO)
-# ===========================
-
-def onchain_free(id="bitcoin"):
-    url = f"https://api.coingecko.com/api/v3/coins/{id}"
+# ======================================================================
+# 🔗 ON-CHAIN LIGERO
+# ======================================================================
+def onchain(id):
     try:
-        r = requests.get(url).json()
-        supply = r["market_data"]["circulating_supply"]
+        r = requests.get(f"https://api.coingecko.com/api/v3/coins/{id}").json()
         vol = r["market_data"]["total_volume"]["usd"]
+        supply = r["market_data"]["circulating_supply"]
 
         score = 0
-        if supply > 1000000: score += 50
-        if vol > 500_000_000: score += 50
+        if vol > 350_000_000: score += 50
+        if supply > 1_000_000: score += 50
+
         return score
     except:
         return 50
 
-# ===========================
-# ANÁLISIS FINAL
-# ===========================
+# ======================================================================
+# 🧠 ANÁLISIS MACRO
+# ======================================================================
+def analizar_macro(id, simbolo):
 
-def analisis_total(id="bitcoin", simbolo="BTCUSDT"):
-    # precios
     p1 = precio_binance(simbolo)
-    p2 = precio_bybit(simbolo)
-    p3 = precio_coingecko(id)
+    p2 = precio_cg(id)
+    precios = [x for x in [p1, p2] if x]
 
-    precios = [p for p in [p1, p2, p3] if p is not None]
     if not precios:
-        return
+        return None
 
     precio = np.mean(precios)
-
-    # crear histórico falso ligero para RSI
     hist = [precio * (1 + np.random.uniform(-0.02, 0.02)) for _ in range(50)]
 
-    rsi_value, tendencia = analizar_tecnico(hist)
-    score_fundamental = fundamental_coingecko(id)
-    score_onchain = onchain_free(id)
+    rsi_val = rsi(hist)
+    opp = detectar_oportunidad(rsi_val)
+    fscore = fundamental(id)
+    oscore = onchain(id)
 
-    # DECISIÓN
-    if rsi_value < 35 and tendencia == "ALCISTA":
-        decision = "📈 *SEÑAL DE COMPRA* (Alta probabilidad)"
-    elif score_fundamental > 70 and score_onchain > 70:
-        decision = "💎 *HODL FUERTE* (Proyecto sólido)"
+    if rsi_val < 35 and fscore > 70 and oscore > 70:
+        decision = "💎 *COMPRA ESTRATÉGICA*"
+    elif fscore > 80:
+        decision = "👜 *HODL SÓLIDO*"
     else:
-        decision = "⚠️ *MERCADO NEUTRO* — Espera mejor entrada"
+        decision = "🕓 *Neutral*"
 
-    # ENVIAR A TELEGRAM
-    mensaje = f"""
-🧠 *CRYPTO ORÁCULO — GOD MODE v1.0*
+    return f"""
+━━━━━━━━━━━━━━━━━━━━━━
+🔮 *MACRO — {simbolo}*
+📌 Precio: *${precio:.2f}*
 
-Activo: {simbolo}
-Precio promedio: ${precio:.2f}
+📊 RSI: {rsi_val:.2f}
+⚡ Señal: {opp}
 
-📊 *Análisis Técnico*
-- RSI: {rsi_value:.2f}
-- Tendencia: {tendencia}
+🪙 Fundamental: {fscore}/100
+🔗 On-Chain: {oscore}/100
 
-🪙 *Fundamental Score:* {score_fundamental}/100  
-🔗 *On-Chain Score:* {score_onchain}/100
-
-🎯 *DECISIÓN:*  
-{decision}
-
-⏳ {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+🎯 DECISIÓN: {decision}
+━━━━━━━━━━━━━━━━━━━━━━
 """
-    send(mensaje)
 
-# ===========================
+# ======================================================================
+# 💎 GEMAS PRO
+# ======================================================================
+def encontrar_gemas():
+    try:
+        r = requests.get(
+            "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_asc&per_page=50"
+        ).json()
+
+        gemas = []
+        for coin in r:
+            vol = coin["total_volume"]
+            mcap = coin["market_cap"]
+            if vol > 5_000_000 and mcap > 1_000_000:
+                gemas.append((coin["id"], vol, mcap, coin["current_price"]))
+
+        gemas = sorted(gemas, key=lambda x: x[1], reverse=True)
+        top = gemas[:3]
+
+        txt = "💎 *GEMAS PRO DEL DÍA*\n━━━━━━━━━━━━━━━━━━━━━━\n"
+        for g in top:
+            txt += f"• {g[0]} — Vol: ${g[1]:,.0f} — MC: ${g[2]:,.0f} — ${g[3]}\n"
+        return txt
+    except:
+        return "No se pudieron obtener gemas hoy."
+
+# ======================================================================
+# 📘 REPORTE DE CARTERA
+# ======================================================================
+def reporte_cartera():
+    return f"""
+📘 *REPORTE DIARIO — CARTERA*
+Dominancia BTC, gemas y macro revisadas.
+━━━━━━━━━━━━━━━━━━━━━━
+⏳ {datetime.now().strftime("%Y-%m-%d")}
+"""
+
+# ======================================================================
+# 🚨 ALERTAS ULTRA-RÁPIDAS
+# ======================================================================
+def alerta(id, simbolo, prev):
+    actual = precio_binance(simbolo)
+    if not actual or not prev:
+        return actual
+
+    cambio = ((actual - prev) / prev) * 100
+
+    if cambio <= -4:
+        send(f"⚡ *FLASH ALERTA* — {simbolo}\n📉 {cambio:.2f}%")
+    if cambio >= 6:
+        send(f"⚡ *FLASH ALERTA* — {simbolo}\n🚀 {cambio:.2f}%")
+
+    return actual
+
+# ======================================================================
 # LOOP PRINCIPAL
-# ===========================
+# ======================================================================
 
-send("🚀 CRYPTO ORÁCULO GOD MODE ACTIVADO — Érica On Fire 💜")
+send("🚀 *CRYPTO ORÁCULO GOD MODE FINAL ACTIVADO*")
+
+precios_previos = {k: precio_binance(v) for k, v in TOP10.items()}
+ult_gemas = 0
+ult_reporte = 0
 
 while True:
-    try:
-        analisis_total("bitcoin", "BTCUSDT")
-        time.sleep(60)  # cada minuto
-    except Exception as e:
-        send(f"❌ Error: {e}")
-        time.sleep(10)
+    ahora = time.time()
+
+    for id, simbolo in TOP10.items():
+        try:
+            msg = analizar_macro(id, simbolo)
+            if msg:
+                send(msg)
+        except Exception as e:
+            send(f"Error en MACRO {simbolo}: {e}")
+
+    for id, simbolo in TOP10.items():
+        precios_previos[id] = alerta(id, simbolo, precios_previos[id])
+
+    if ahora - ult_gemas > 21600:
+        send(encontrar_gemas())
+        ult_gemas = ahora
+
+    if ahora - ult_reporte > 86400:
+        send(reporte_cartera())
+        ult_reporte = ahora
+
+    time.sleep(120)
