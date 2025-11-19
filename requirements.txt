@@ -1,4 +1,10 @@
 flask
 requests
 numpy
-gunicorn
+pandas
+scikit-learn
+statsmodels
+beautifulsoup4
+lxml
+python-dotenv
+tensorflow-cpu
