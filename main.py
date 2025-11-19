@@ -9,7 +9,7 @@ import threading
 # CONFIGURACIÓN TELEGRAM
 # ===========================
 TOKEN = "8466103477:AAHdB0YVMfxlj3fO8VQfZapAFi362-Vs4S0"
-CHAT_ID = "-1009876543210"
+CHAT_ID = "-1003348348510"  # ← ESTE ES TU CHAT REAL
 API_URL = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
 
 # ===========================
@@ -19,8 +19,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
-    # Render revisa este endpoint cada minuto
-    send("🔥 El bot CRYPTO HOLD DEO está online y funcionando en Render.")
+    send("🔥 El bot CRYPTO ORÁCULO está ONLINE en Render.")
     return "CRYPTO ORÁCULO GOD MODE ULTRA — ACTIVO"
 
 def iniciar_servidor():
@@ -28,16 +27,20 @@ def iniciar_servidor():
     app.run(host="0.0.0.0", port=port, threaded=True)
 
 # ===========================
-# ENVIAR A TELEGRAM
+# ENVIAR MENSAJE A TELEGRAM
 # ===========================
 def send(text):
     try:
-        requests.post(API_URL, data={"chat_id": CHAT_ID, "text": text, "parse_mode": "Markdown"})
+        requests.post(API_URL, data={
+            "chat_id": CHAT_ID,
+            "text": text,
+            "parse_mode": "Markdown"
+        })
     except Exception as e:
         print("❌ Error enviando mensaje:", e)
 
 # ===========================
-# LISTA DE CRYPTOS
+# LISTA DE CRYPTOS TOP
 # ===========================
 TOP = {
     "bitcoin": "BTCUSDT",
@@ -57,7 +60,9 @@ TOP = {
 # ===========================
 def precio_binance(symbol):
     try:
-        r = requests.get(f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}").json()
+        r = requests.get(
+            f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}"
+        ).json()
         return float(r["price"])
     except:
         return None
@@ -67,13 +72,15 @@ def precio_binance(symbol):
 # ===========================
 def precio_cg(coin_id):
     try:
-        r = requests.get(f"https://api.coingecko.com/api/v3/simple/price?ids={coin_id}&vs_currencies=usd").json()
+        r = requests.get(
+            f"https://api.coingecko.com/api/v3/simple/price?ids={coin_id}&vs_currencies=usd"
+        ).json()
         return float(r[coin_id]["usd"])
     except:
         return None
 
 # ===========================
-# RSI
+# CÁLCULO DE RSI
 # ===========================
 def rsi(hist, period=14):
     delta = np.diff(hist)
@@ -95,6 +102,9 @@ def señal_rsi(valor):
         return "⚠️ Sobrecompra fuerte"
     return "📈 Normal"
 
+# ===========================
+# MOVIMIENTOS RÁPIDOS
+# ===========================
 def movimiento_rapido(p_actual, p_anterior):
     if p_anterior is None:
         return None
@@ -107,6 +117,9 @@ def movimiento_rapido(p_actual, p_anterior):
 
 precios_previos = {}
 
+# ===========================
+# LOOP PRINCIPAL DEL BOT
+# ===========================
 def loop_bot():
     send("🚀 *CRYPTO ORÁCULO GOD MODE ULTRA ACTIVADO*")
 
@@ -116,10 +129,13 @@ def loop_bot():
                 p1 = precio_binance(simbolo)
                 p2 = precio_cg(coin_id)
                 precios = [x for x in [p1, p2] if x is not None]
+
                 if not precios:
                     continue
 
                 precio = np.mean(precios)
+
+                # Crear historial para RSI
                 hist = [precio * (1 + np.random.uniform(-0.015, 0.015)) for _ in range(60)]
                 valor_rsi = rsi(hist)
                 señal = señal_rsi(valor_rsi)
@@ -145,9 +161,9 @@ def loop_bot():
 
         time.sleep(60)
 
+# ===========================
+# INICIO DE LOS HILOS
+# ===========================
 if __name__ == "__main__":
-    # Hilo para Flask
     threading.Thread(target=iniciar_servidor).start()
-
-    # Hilo para el bot
     threading.Thread(target=loop_bot).start()
