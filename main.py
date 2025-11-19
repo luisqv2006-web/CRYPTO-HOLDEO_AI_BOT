@@ -19,6 +19,8 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
+    # Render revisa este endpoint cada minuto
+    send("🔥 El bot CRYPTO HOLD DEO está online y funcionando en Render.")
     return "CRYPTO ORÁCULO GOD MODE ULTRA — ACTIVO"
 
 def iniciar_servidor():
@@ -144,5 +146,8 @@ def loop_bot():
         time.sleep(60)
 
 if __name__ == "__main__":
+    # Hilo para Flask
     threading.Thread(target=iniciar_servidor).start()
-    loop_bot()
+
+    # Hilo para el bot
+    threading.Thread(target=loop_bot).start()
