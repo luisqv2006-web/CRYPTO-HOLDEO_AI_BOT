@@ -1,7 +1,7 @@
 services:
   - type: web
-    name: crypto-holdeo-ai-bot
+    name: crypto-holde-o-ai-bot
     env: python
     plan: free
-    buildCommand: "chmod +x start.sh && pip install -r requirements.txt"
-    startCommand: "./start.sh"
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python3 main.py"
