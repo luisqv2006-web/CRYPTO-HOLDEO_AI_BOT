@@ -1,7 +1,18 @@
 services:
   - type: web
-    name: crypto-holde-ai-bot
-    env: python
-    plan: free
+    name: crypto-oraculo-vip
+    runtime: python
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn main:app --bind 0.0.0.0:$PORT"
+    startCommand: "python main.py"
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.10"
+
+  - type: worker
+    name: crypto-oraculo-worker
+    runtime: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python worker.py"
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.10"
