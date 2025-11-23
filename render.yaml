@@ -1,0 +1,16 @@
+services:
+  - name: crypto-holdeo-bot
+    type: worker
+    env: python
+    region: oregon
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python main.py"
+
+    autoDeploy: true
+    plan: starter
+
+    # Evita que Render apague el proceso por inactividad
+    envVars:
+      TOKEN: ${TOKEN}
+      CHAT_ID: ${CHAT_ID}
+      CAPITAL: ${CAPITAL}
