@@ -11,16 +11,13 @@ from dotenv import load_dotenv
 
 # ==== Importar módulos auxiliares ====
 from utils import get_klines
-from indicators import (
-    ema20, ema50, ema200, rsi,
-    detect_divergence
-)
+from indicators import ema20, ema50, ema200, rsi, detect_divergence
 from smc import smc_summary
 from machine_learning import ai_score
 from sentiment import get_strong_news
 from whales import whale_monitor
 from positions_manager import add_position
-from tp_monitor import check_targets
+import tp_monitor  # <<----- IMPORTACIÓN CORREGIDA
 
 
 # ============================================
@@ -101,28 +98,23 @@ def puntaje_holdeo(df, symbol):
     rsi_v = rsi(df).iloc[-1]
     div = detect_divergence(df)
 
-    # Precio bajo EMA200 = descuento institucional
     if precio < e200:
         score += 2
         razones.append("📉 Precio bajo EMA200 — Descuento institucional")
 
-    # RSI bajo
     if rsi_v < 35:
         score += 2
         razones.append("🔻 RSI en zona de sobreventa")
 
-    # Divergencia
     if div:
         score += 1
         razones.append(f"⚠ {div}")
 
-    # IA de predicción
     ai = ai_score(df)
     if ai["confidence"] > 65:
         score += 2
         razones.append(f"🤖 IA proyecta subida ({ai['confidence']}%)")
 
-    # Ballenas
     whales = whale_monitor()
     if whales:
         score += 2
@@ -167,13 +159,6 @@ def enviar_alerta(symbol, score, razones, monto_info, tp1, tp2, tp3):
 • TP2: {tp2:.2f} — Tendencia
 • TP3: {tp3:.2f} — Macro / salida final
 
-🧭 *Estrategia paso a paso*
-1️⃣ Compra la cantidad sugerida
-2️⃣ Mantén mientras el precio siga sobre EMA20D
-3️⃣ Reduce si rompe estructura
-4️⃣ Vende parcial en TP1/TP2
-5️⃣ Cierra ciclo en TP3
-
 📌 Entrada registrada automáticamente.
 ━━━━━━━━━━━━━━━━━━━━
 """
@@ -213,7 +198,7 @@ def analizar():
             analizar_symbol(symbol)
 
         # Revisión de TPs alcanzados
-        check_targets()
+        tp_monitor.check_targets()  # <<--- LLAMADA CORREGIDA
 
         time.sleep(3600)  # Analiza cada hora
 
