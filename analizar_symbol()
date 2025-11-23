@@ -1,9 +1,8 @@
 def analizar_symbol(symbol):
     df = get_klines(symbol, "1d", 200)
 
-    # 🔰 Validación para evitar errores si no hay datos
-    if df is None or df.empty or "close" not in df.columns:
-        print(f"[SKIP] Sin datos válidos para {symbol}")
+    if df is None or not hasattr(df, "empty") or df.empty:
+        print(f"[SKIP] No data for {symbol}")
         return
 
     score, razones = puntaje_holdeo(df, symbol)
