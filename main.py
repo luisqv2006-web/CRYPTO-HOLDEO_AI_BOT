@@ -1,190 +1,226 @@
-# ------------------------------------
-# CRYPTOSNIPER FX — ULTRA PRO BINARIAS v4.0 (STAKE $5)
-# ------------------------------------
-from keep_alive import keep_alive
-keep_alive()
+# ============================================
+# CRYPTOSNIPER HOLD — ANALISTA INSTITUCIONAL
+# Modo Holdeo | Señales + Registro + Seguimiento
+# ============================================
 
 import time
 import requests
-import threading
-import statistics
-import pytz
-from datetime import datetime
+import numpy as np
+import os
+from dotenv import load_dotenv
 
-from auto_copy import AutoCopy
+# ==== Importar módulos auxiliares ====
+from utils import get_klines
+from indicators import (
+    ema20, ema50, ema200, rsi,
+    detect_divergence
+)
+from smc import smc_summary
+from machine_learning import ai_score
+from sentiment import get_strong_news
+from whales import whale_monitor
+from positions_manager import add_position
+from tp_monitor import check_targets
 
-# ------------------------------------
+
+# ============================================
 # CONFIGURACIÓN
-# ------------------------------------
-TOKEN = "8588736688:AAF_mBkQUJIDXqAKBIzgDvsEGNJuqXJHNxA"
-CHAT_ID = "-1003348348510"
-DERIV_TOKEN = "z30pnK3N1UjKZTA"
+# ============================================
 
-FINNHUB_KEY = "d4d2n71r01qt1lahgi60d4d2n71r01qt1lahgi6g"
-NEWS_API = f"https://finnhub.io/api/v1/calendar/economic?token={FINNHUB_KEY}"
+load_dotenv()
 
-API = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+TOKEN = os.getenv("TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")
 
-mx = pytz.timezone("America/Mexico_City")
+CAPITAL_TOTAL = int(os.getenv("CAPITAL", 500))
+RIESGO = 0.02  # 2%
+UMBRAL_SENAL = 6
 
-# ------------------------------------
-# ACTIVOS (Deriv Symbols)
-# ------------------------------------
-SYMBOLS = {
-    "XAU/USD": "frxXAUUSD",
-    "EUR/USD": "frxEURUSD",
-    "GBP/USD": "frxGBPUSD",
-    "USD/JPY": "frxUSDJPY"
-}
+API_URL = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
 
-# Inicializar AutoCopy (sin monto aquí, lo mandamos en cada señal)
-copy_trader = AutoCopy(DERIV_TOKEN)
 
-# ------------------------------------
-# MENSAJERÍA TELEGRAM
-# ------------------------------------
+# ============================================
+# LISTA DE CRYPTOS A ANALIZAR
+# ============================================
+
+CRYPTOS = [
+    "BTCUSDT", "ETHUSDT",
+    "SOLUSDT", "BNBUSDT", "AVAXUSDT", "ADAUSDT",
+    "DOTUSDT", "ATOMUSDT",
+    "OPUSDT", "ARBUSDT", "SUIUSDT", "SEIUSDT", "INJUSDT",
+    "RNDRUSDT", "FETUSDT", "TAOUSDT"
+]
+
+
+# ============================================
+# FUNCIÓN PARA ENVIAR MENSAJES A TELEGRAM
+# ============================================
+
 def send(msg):
-    try:
-        requests.post(API, json={
-            "chat_id": CHAT_ID,
-            "text": msg,
-            "parse_mode": "HTML"
-        })
-    except:
-        pass
+    requests.post(API_URL, data={
+        "chat_id": CHAT_ID,
+        "text": msg,
+        "parse_mode": "Markdown"
+    })
 
 
-# ------------------------------------
-# OBTENER VELAS 5M
-# ------------------------------------
-def obtener_velas_5m(symbol_key):
-    symbol = SYMBOLS[symbol_key]
-    now = int(time.time())
-    desde = now - (60 * 60 * 12)
+# ============================================
+# FUNCIONES DE CÁLCULO
+# ============================================
 
-    url = (
-        f"https://finnhub.io/api/v1/forex/candle?"
-        f"symbol={symbol}&resolution=5&from={desde}&to={now}&token={FINNHUB_KEY}"
-    )
+def calcular_monto(precio, stop_pct, capital=CAPITAL_TOTAL, riesgo_pct=RIESGO):
+    riesgo = capital * riesgo_pct
+    perdida_unidad = precio * stop_pct
+    monto = riesgo / perdida_unidad
 
-    r = requests.get(url).json()
-    if r.get("s") != "ok":
-        return None
-
-    return list(zip(r["t"], r["o"], r["h"], r["l"], r["c"]))
-
-
-# ------------------------------------
-# DETECCIÓN ICT PRO ULTRA
-# ------------------------------------
-def detectar_confluencias(velas):
-    o,h,l,c = zip(*[(x[1], x[2], x[3], x[4]) for x in velas[-12:]])
-
-    cons = {
-        "BOS": False,
-        "CHOCH": False,
-        "OrderBlock": False,
-        "FVG_Internal": False,
-        "FVG_External": False,
-        "EQH": False,
-        "EQL": False,
-        "Liquidity_Internal": False,
-        "Liquidity_External": False,
-        "Volatilidad": False,
-        "Tendencia": False
+    return {
+        "precio": precio,
+        "riesgo": riesgo,
+        "monto": round(monto, 2),
+        "stop_pct": stop_pct
     }
 
-    if c[-1] > h[-2]: cons["BOS"] = True
-    if c[-1] < l[-2]: cons["CHOCH"] = True
 
-    if (c[-1] > o[-1] and l[-1] > l[-2]) or (c[-1] < o[-1] and h[-1] < h[-2]):
-        cons["OrderBlock"] = True
-
-    if h[-2] < l[-4] or l[-2] > h[-4]:
-        cons["FVG_Internal"] = True
-
-    if c[-1] > max(h[:-1])*1.0004 or c[-1] < min(l[:-1])*0.9996:
-        cons["FVG_External"] = True
-
-    if abs(h[-1] - h[-2]) < (h[-1] * 0.00015): cons["EQH"] = True
-    if abs(l[-1] - l[-2]) < (l[-1] * 0.00015): cons["EQL"] = True
-
-    if h[-1] > max(h[-6:-1]) or l[-1] < min(l[-6:-1]): cons["Liquidity_Internal"] = True
-    if c[-1] > max(h[-11:-3]) or c[-1] < min(l[-11:-3]): cons["Liquidity_External"] = True
-
-    rng = [h[i] - l[i] for i in range(12)]
-    if statistics.mean(rng) > 0.0009:
-        cons["Volatilidad"] = True
-
-    if c[-1] > c[-5] or c[-1] < c[-5]:
-        cons["Tendencia"] = True
-
-    return cons  
+def calcular_tps(precio, stop_pct):
+    tp1 = precio + abs(precio * stop_pct)     # Recuperar liquidez
+    tp2 = precio * 1.35                       # Tendencia
+    tp3 = precio * 2.0                        # Macro
+    return tp1, tp2, tp3
 
 
-# ------------------------------------
-# PROCESAR SEÑAL + AUTOCOPY ($5)
-# ------------------------------------
-def procesar_senal(pair, cons, price):
+# ============================================
+# PUNTAJE DE OPORTUNIDAD PARA HOLDEO
+# ============================================
 
-    if cons["BOS"]: direction = "BUY"
-    elif cons["CHOCH"]: direction = "SELL"
-    else: return None
-    
-    simbolo_deriv = SYMBOLS[pair]
+def puntaje_holdeo(df, symbol):
+    score = 0
+    razones = []
 
-    # 🔥 Aquí aplicamos monto fijo de $5
-    copy_trader.ejecutar(simbolo_deriv, direction, amount=5)
+    precio = df["close"].iloc[-1]
+    e200 = ema200(df).iloc[-1]
+    rsi_v = rsi(df).iloc[-1]
+    div = detect_divergence(df)
 
-    texto = "\n".join([f"✔ {k}" for k,v in cons.items() if v])
+    # Precio bajo EMA200 = descuento institucional
+    if precio < e200:
+        score += 2
+        razones.append("📉 Precio bajo EMA200 — Descuento institucional")
 
-    return f"""
-🔥✨ <b>CryptoSniper FX — ULTRA PRO</b>
+    # RSI bajo
+    if rsi_v < 35:
+        score += 2
+        razones.append("🔻 RSI en zona de sobreventa")
 
-📌 <b>Activo:</b> {pair}
-📈 <b>Dirección:</b> {direction}
-💵 <b>Precio:</b> {price}
-💰 <b>Monto:</b> $5 USD
+    # Divergencia
+    if div:
+        score += 1
+        razones.append(f"⚠ {div}")
 
-🧠 <b>Confluencias:</b>
-{texto}
+    # IA de predicción
+    ai = ai_score(df)
+    if ai["confidence"] > 65:
+        score += 2
+        razones.append(f"🤖 IA proyecta subida ({ai['confidence']}%)")
 
-🤖 Operación ejecutada automáticamente en Deriv (5m)
+    # Ballenas
+    whales = whale_monitor()
+    if whales:
+        score += 2
+        razones.append("🐳 Acumulación de ballenas")
+
+    return score, razones
+
+
+# ============================================
+# ENVÍO DE ALERTA + REGISTRO DE POSICIÓN
+# ============================================
+
+def enviar_alerta(symbol, score, razones, monto_info, tp1, tp2, tp3):
+    precio = monto_info["precio"]
+    sugerido = monto_info["monto"]
+    riesgo = monto_info["riesgo"]
+
+    # 🔥 Registrar posición automáticamente
+    add_position(
+        symbol=symbol,
+        entry_price=precio,
+        amount=sugerido,
+        tp1=tp1,
+        tp2=tp2,
+        tp3=tp3
+    )
+
+    msg = f"""
+💎 *OPORTUNIDAD DE HOLDEO — {symbol}*
+━━━━━━━━━━━━━━━━━━━━
+📍 Precio actual: {precio}
+
+📊 *Puntaje:* {score}/10  
+💰 *Compra sugerida:* ${sugerido} MXN  
+⚠ *Riesgo:* ${riesgo} MXN (2%)
+
+🔍 *Razones institucionales:*
+{chr(10).join(razones)}
+
+🎯 *Take Profits planificados*
+• TP1: {tp1:.2f} — Recuperar liquidez
+• TP2: {tp2:.2f} — Tendencia
+• TP3: {tp3:.2f} — Macro / salida final
+
+🧭 *Estrategia paso a paso*
+1️⃣ Compra la cantidad sugerida
+2️⃣ Mantén mientras el precio siga sobre EMA20D
+3️⃣ Reduce si rompe estructura
+4️⃣ Vende parcial en TP1/TP2
+5️⃣ Cierra ciclo en TP3
+
+📌 Entrada registrada automáticamente.
+━━━━━━━━━━━━━━━━━━━━
 """
+    send(msg)
 
 
-# ------------------------------------
+# ============================================
+# ANÁLISIS PRINCIPAL
+# ============================================
+
+def analizar_symbol(symbol):
+    df = get_klines(symbol, "1d", 200)
+    if df is None:
+        return
+
+    score, razones = puntaje_holdeo(df, symbol)
+
+    if score >= UMBRAL_SENAL:
+        precio = df["close"].iloc[-1]
+        stop_pct = 0.09
+
+        monto_info = calcular_monto(precio, stop_pct)
+        tp1, tp2, tp3 = calcular_tps(precio, stop_pct)
+
+        enviar_alerta(symbol, score, razones, monto_info, tp1, tp2, tp3)
+
+
+# ============================================
 # LOOP PRINCIPAL
-# ------------------------------------
-def analizar():
+# ============================================
 
-    send("🔥 <b>CryptoSniper FX — ULTRA PRO Activado ($5 por operación)</b>")
-    ultima_sesion = ""
+def analizar():
+    send("🚀 *Modo Holdeo Activado — Señales solo con confluencias fuertes*")
 
     while True:
+        for symbol in CRYPTOS:
+            analizar_symbol(symbol)
 
-        ahora = datetime.now(mx)
-        hora = ahora.hour
+        # Revisión de TPs alcanzados
+        check_targets()
 
-        for pair in SYMBOLS.keys():
-
-            velas = obtener_velas_5m(pair)
-            if not velas:
-                continue
-
-            cons = detectar_confluencias(velas)
-            total = sum(cons.values())
-
-            if total >= 5:
-                price = velas[-1][4]
-                mensaje = procesar_senal(pair, cons, price)
-                if mensaje:
-                    send(mensaje)
-
-        time.sleep(300)
+        time.sleep(3600)  # Analiza cada hora
 
 
-# ------------------------------------
-# INICIAR BOT
-# ------------------------------------
-threading.Thread(target=analizar).start()
+# ============================================
+# EJECUCIÓN
+# ============================================
+
+if __name__ == "__main__":
+    analizar()
