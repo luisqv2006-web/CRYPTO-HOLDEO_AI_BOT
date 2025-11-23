@@ -1,5 +1,5 @@
 def puntaje_holdeo(df, symbol):
-    # 🛑 Si no hay datos, evitar crasheo
+    # 🛑 Validación para evitar crasheo
     if df is None or df.empty or "close" not in df.columns:
         return 0, ["❌ No hay datos suficientes para evaluar"]
 
@@ -16,23 +16,20 @@ def puntaje_holdeo(df, symbol):
         score += 2
         razones.append("📉 Precio bajo EMA200 — Descuento institucional")
 
-    # RSI en zona de descuento fuerte
     if rsi_v < 35:
         score += 2
-        razones.append("🔻 RSI en sobreventa")
+        razones.append("🔻 RSI en zona de sobreventa")
 
-    # Divergencia
     if div:
         score += 1
         razones.append(f"⚠ {div}")
 
-    # IA de predicción
+    # IA — valida que tenga datos
     ai = ai_score(df)
     if ai and ai.get("confidence", 0) > 65:
         score += 2
         razones.append(f"🤖 IA proyecta subida ({ai['confidence']}%)")
 
-    # Ballenas
     whales = whale_monitor()
     if whales:
         score += 2
