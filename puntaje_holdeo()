@@ -1,38 +1,25 @@
 def puntaje_holdeo(df, symbol):
-    # 🛑 Validación para evitar crasheo
-    if df is None or df.empty or "close" not in df.columns:
-        return 0, ["❌ No hay datos suficientes para evaluar"]
+    # 🔰 Validación estricta
+    if df is None or not hasattr(df, "empty") or df.empty:
+        print(f"[ERROR] DF vacío para {symbol}")
+        return 0, ["❌ Datos insuficientes"]
+
+    if "close" not in df.columns or len(df["close"]) < 2:
+        print(f"[ERROR] Columna 'close' no válida en {symbol}")
+        return 0, ["❌ Sin velas suficientes"]
 
     score = 0
     razones = []
 
+    # === Datos seguros ===
     precio = df["close"].iloc[-1]
-    e200 = ema200(df).iloc[-1]
-    rsi_v = rsi(df).iloc[-1]
-    div = detect_divergence(df)
 
-    # Precio bajo EMA200 → compra institucional
-    if precio < e200:
-        score += 2
-        razones.append("📉 Precio bajo EMA200 — Descuento institucional")
+    try:
+        e200 = ema200(df).iloc[-1]
+    except Exception:
+        e200 = precio
 
-    if rsi_v < 35:
-        score += 2
-        razones.append("🔻 RSI en zona de sobreventa")
-
-    if div:
-        score += 1
-        razones.append(f"⚠ {div}")
-
-    # IA — valida que tenga datos
-    ai = ai_score(df)
-    if ai and ai.get("confidence", 0) > 65:
-        score += 2
-        razones.append(f"🤖 IA proyecta subida ({ai['confidence']}%)")
-
-    whales = whale_monitor()
-    if whales:
-        score += 2
-        razones.append("🐳 Acumulación de ballenas detectada")
-
-    return score, razones
+    try:
+        rsi_v = rsi(df).iloc[-1]
+    except Exception:
+        rsi_v = 50
