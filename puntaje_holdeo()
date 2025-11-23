@@ -1,0 +1,41 @@
+def puntaje_holdeo(df, symbol):
+    # 🛑 Si no hay datos, evitar crasheo
+    if df is None or df.empty or "close" not in df.columns:
+        return 0, ["❌ No hay datos suficientes para evaluar"]
+
+    score = 0
+    razones = []
+
+    precio = df["close"].iloc[-1]
+    e200 = ema200(df).iloc[-1]
+    rsi_v = rsi(df).iloc[-1]
+    div = detect_divergence(df)
+
+    # Precio bajo EMA200 → compra institucional
+    if precio < e200:
+        score += 2
+        razones.append("📉 Precio bajo EMA200 — Descuento institucional")
+
+    # RSI en zona de descuento fuerte
+    if rsi_v < 35:
+        score += 2
+        razones.append("🔻 RSI en sobreventa")
+
+    # Divergencia
+    if div:
+        score += 1
+        razones.append(f"⚠ {div}")
+
+    # IA de predicción
+    ai = ai_score(df)
+    if ai and ai.get("confidence", 0) > 65:
+        score += 2
+        razones.append(f"🤖 IA proyecta subida ({ai['confidence']}%)")
+
+    # Ballenas
+    whales = whale_monitor()
+    if whales:
+        score += 2
+        razones.append("🐳 Acumulación de ballenas detectada")
+
+    return score, razones
