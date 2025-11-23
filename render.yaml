@@ -3,15 +3,16 @@ services:
     type: worker
     env: python
     region: oregon
-    plan: free
+    plan: starter   # free ya no existe para workers, starter es el válido
+
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python main.py"
     autoDeploy: true
 
     envVars:
       - key: TOKEN
-        sync: false
+        value: ${TOKEN}
       - key: CHAT_ID
-        sync: false
+        value: ${CHAT_ID}
       - key: CAPITAL
-        sync: false
+        value: ${CAPITAL}
