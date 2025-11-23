@@ -1,0 +1,21 @@
+def analizar_symbol(symbol):
+    df = get_klines(symbol, "1d", 200)
+
+    # 🔰 Validaciones para evitar errores cuando Binance no regrese datos
+    if df is None or df.empty or "close" not in df.columns:
+        print(f"[SKIP] No valid data for {symbol}")
+        return
+
+    score, razones = puntaje_holdeo(df, symbol)
+
+    # Si no hay confluencia fuerte, no mandamos señal
+    if score < UMBRAL_SENAL:
+        return
+
+    precio = df["close"].iloc[-1]
+    stop_pct = 0.09  # 9% stop técnico estándar
+
+    monto_info = calcular_monto(precio, stop_pct)
+    tp1, tp2, tp3 = calcular_tps(precio, stop_pct)
+
+    enviar_alerta(symbol, score, razones, monto_info, tp1, tp2, tp3)
