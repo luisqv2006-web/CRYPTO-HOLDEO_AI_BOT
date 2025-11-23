@@ -1,16 +1,33 @@
 def analizar_symbol(symbol):
     df = get_klines(symbol, "1d", 200)
 
+    # Validación global
     if df is None or not hasattr(df, "empty") or df.empty:
-        print(f"[SKIP] No data for {symbol}")
+        print(f"[SKIP] Sin datos para {symbol}")
         return
 
-    score, razones = puntaje_holdeo(df, symbol)
+    # Validar columnas mínimas
+    if "close" not in df.columns:
+        print(f"[SKIP] Sin columna 'close' para {symbol}")
+        return
 
+    # Validar cantidad mínima de velas
+    if len(df) < 50:
+        print(f"[SKIP] {symbol} tiene solo {len(df)} velas, insuficiente")
+        return
+
+    # Calcular señal
+    score, razones = puntaje_holdeo(df, symbol)
     if score < UMBRAL_SENAL:
         return
 
-    precio = df["close"].iloc[-1]
+    # Cálculo de entrada
+    try:
+        precio = df["close"].iloc[-1]
+    except Exception:
+        print(f"[ERROR] No se pudo obtener precio de cierre en {symbol}")
+        return
+
     stop_pct = 0.09
 
     monto_info = calcular_monto(precio, stop_pct)
