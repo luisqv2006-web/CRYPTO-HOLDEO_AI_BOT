@@ -1,29 +1,20 @@
-from threading import Thread
-from telegram_bot import start_telegram
-from flask import Flask
-import os
+from telegram.ext import Dispatcher, CommandHandler
+from telegram import Bot, Update
+from flask import request
+from config import TELEGRAM_TOKEN
 
-# =========================
-# MINI SERVIDOR PARA RENDER (PUERTO GRATIS)
-# =========================
-app = Flask(__name__)
+bot = Bot(token=TELEGRAM_TOKEN)
+dispatcher = Dispatcher(bot, None, use_context=True)
 
-@app.route("/")
-def home():
-    return "✅ Bot DeFAI BSC activo 24/7 (modo gratis)"
+def start(update, context):
+    update.message.reply_text("✅ AHORA SÍ, BOT ACTIVO POR WEBHOOK 😎")
 
-def run_web():
-    port = int(os.environ.get("PORT", 10000))
-    # MUY IMPORTANTE: use_reloader=False evita el duplicado
-    app.run(host="0.0.0.0", port=port, use_reloader=False)
+def test(update, context):
+    update.message.reply_text("🧪 TEST OK — WEBHOOK FUNCIONANDO")
 
-# =========================
-# INICIO ÚNICO DEL SISTEMA
-# =========================
-if __name__ == "__main__":
-    print("🚀 BOT DeFAI BSC INICIADO (MODO GRATIS SIN DUPLICADOS)")
+dispatcher.add_handler(CommandHandler("start", start))
+dispatcher.add_handler(CommandHandler("test", test))
 
-    Thread(target=run_web).start()
-
-    # Solo UNA llamada real al bot de Telegram
-    start_telegram()
+def process_update(req):
+    update = Update.de_json(req.get_json(force=True), bot)
+    dispatcher.process_update(update)
