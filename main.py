@@ -4,7 +4,7 @@ from flask import Flask
 import os
 
 # =========================
-# MINI SERVIDOR PARA RENDER (PUERTO FALSO)
+# MINI SERVIDOR PARA RENDER (PUERTO GRATIS)
 # =========================
 app = Flask(__name__)
 
@@ -14,16 +14,16 @@ def home():
 
 def run_web():
     port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    # MUY IMPORTANTE: use_reloader=False evita el duplicado
+    app.run(host="0.0.0.0", port=port, use_reloader=False)
 
 # =========================
-# INICIO DEL SISTEMA
+# INICIO ÚNICO DEL SISTEMA
 # =========================
 if __name__ == "__main__":
-    print("🚀 BOT DeFAI BSC INICIADO (MODO GRATIS CON PUERTO FALSO)")
+    print("🚀 BOT DeFAI BSC INICIADO (MODO GRATIS SIN DUPLICADOS)")
 
-    # Hilo para el servidor web (satisface a Render)
     Thread(target=run_web).start()
 
-    # Bot de Telegram (lo importante)
+    # Solo UNA llamada real al bot de Telegram
     start_telegram()
