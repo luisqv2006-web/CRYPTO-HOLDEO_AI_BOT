@@ -1,20 +1,27 @@
-from telegram.ext import Dispatcher, CommandHandler
-from telegram import Bot, Update
-from flask import request
+from flask import Flask, request
+import os
+from telegram_bot import process_update
+import requests
 from config import TELEGRAM_TOKEN
 
-bot = Bot(token=TELEGRAM_TOKEN)
-dispatcher = Dispatcher(bot, None, use_context=True)
+app = Flask(__name__)
 
-def start(update, context):
-    update.message.reply_text("✅ AHORA SÍ, BOT ACTIVO POR WEBHOOK 😎")
+@app.route("/")
+def home():
+    return "✅ Bot DeFAI BSC activo 24/7 por Webhook"
 
-def test(update, context):
-    update.message.reply_text("🧪 TEST OK — WEBHOOK FUNCIONANDO")
+@app.route(f"/webhook/{TELEGRAM_TOKEN}", methods=["POST"])
+def webhook():
+    process_update(request)
+    return "ok", 200
 
-dispatcher.add_handler(CommandHandler("start", start))
-dispatcher.add_handler(CommandHandler("test", test))
+def set_webhook():
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook"
+    webhook_url = f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/webhook/{TELEGRAM_TOKEN}"
+    requests.post(url, data={"url": webhook_url})
 
-def process_update(req):
-    update = Update.de_json(req.get_json(force=True), bot)
-    dispatcher.process_update(update)
+if __name__ == "__main__":
+    print("🚀 BOT DeFAI BSC INICIADO (MODO WEBHOOK GRATIS)")
+    set_webhook()
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
