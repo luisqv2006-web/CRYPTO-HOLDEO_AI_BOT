@@ -1,19 +1,20 @@
-from telegram.ext import Updater, CommandHandler
+from telegram.ext import Dispatcher, CommandHandler
+from telegram import Bot, Update
+from flask import request
 from config import TELEGRAM_TOKEN
 
+bot = Bot(token=TELEGRAM_TOKEN)
+dispatcher = Dispatcher(bot, None, use_context=True)
+
 def start(update, context):
-    update.message.reply_text("✅ AHORA SÍ, BOT VIVO Y SIN CONFLICTOS 😎")
+    update.message.reply_text("✅ AHORA SÍ, BOT ACTIVO POR WEBHOOK 😎")
 
 def test(update, context):
-    update.message.reply_text("🧪 TEST OK — SESIÓN ÚNICA ACTIVA")
+    update.message.reply_text("🧪 TEST OK — WEBHOOK FUNCIONANDO")
 
-def start_telegram():
-    updater = Updater(TELEGRAM_TOKEN, use_context=True)
-    dp = updater.dispatcher
+dispatcher.add_handler(CommandHandler("start", start))
+dispatcher.add_handler(CommandHandler("test", test))
 
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("test", test))
-
-    # Esto limpia mensajes atorados de sesiones viejas
-    updater.start_polling(drop_pending_updates=True)
-    updater.idle()
+def process_update(req):
+    update = Update.de_json(req.get_json(force=True), bot)
+    dispatcher.process_update(update)
